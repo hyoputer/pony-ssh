@@ -40,31 +40,35 @@ export function activate( context: vscode.ExtensionContext ) {
 
 		// Ask for remote path
 		const defaultPath = availableHosts[ hostName ].path || '~';
-		let remotePath = await vscode.window.showInputBox( {
-			placeHolder: 'Remote path. Default: ' + defaultPath,
-		} );
-		if ( '' === remotePath ) {
-			remotePath = defaultPath;
-		}
-		if ( ! remotePath ) {
-			return;
-		}
 
 		// Open the requested path
-		const leadingSlashPath = ( remotePath.startsWith( '/' ) ? '' : '/' ) + remotePath;
+		const leadingSlashPath = ( defaultPath.startsWith( '/' ) ? '' : '/' ) + defaultPath;
 		const fullPath = 'ponyssh:/' + hostName + leadingSlashPath;
-		const displayName = hostName + ':' + ( remotePath.startsWith( '~' ) ? remotePath : leadingSlashPath );
+		const displayName = hostName + ':' + ( defaultPath.startsWith( '~' ) ? defaultPath : leadingSlashPath );
 
-		log.info( 'Opening remote folder: ' + fullPath );
+        log.info('Opening remote folder: ' + fullPath);
 
-		const newFolder = {
-			name: displayName,
-			uri: vscode.Uri.parse( fullPath ),
-		};
 
-		const position = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0;
-		vscode.workspace.updateWorkspaceFolders( position, 0, newFolder );
-		vscode.commands.executeCommand( 'workbench.view.explorer' );
+        const options: vscode.OpenDialogOptions = {
+            canSelectFiles: false,
+            canSelectFolders: true,
+            defaultUri: vscode.Uri.parse(fullPath),
+            canSelectMany: false,
+            openLabel: 'Open'
+        };
+
+        vscode.window.showOpenDialog(options).then(fileUri => {
+            if (fileUri && fileUri[0]) {
+                const newFolder = {
+                    name: fileUri[0].fsPath,
+                    uri: fileUri[0],
+                };
+
+                const position = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0;
+                vscode.workspace.updateWorkspaceFolders(position, 0, newFolder);
+                vscode.commands.executeCommand('workbench.view.explorer');
+            }
+        });
 	} ) );
 
 	context.subscriptions.push( vscode.commands.registerCommand( 'ponyssh.resetConnections', async _ => {
